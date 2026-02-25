@@ -80,7 +80,7 @@ All resources are provisioned via **Bicep** templates in the `infra/` directory.
 | Resource Group       | `rg-learningapp-<env>`          | Container for all resources                |
 | Virtual Network      | `vnet-learningapp-<env>`        | 10.0.0.0/16 with app integration & PE subnets |
 | App Service Plan     | `plan-learningapp-<env>`        | Linux, B1 tier (supports slots & SSL)      |
-| App Service          | `app-learningapp-<env>`         | Node.js 20 LTS + VNet integration + private endpoint |
+| App Service          | `app-learningapp-<env>`         | Node.js 24 LTS + VNet integration + private endpoint |
 | SQL Server           | `sql-learningapp-<env>`         | Azure SQL with Entra-only auth, private endpoint |
 | SQL Database         | `sqldb-learningapp-<env>`       | General Purpose Serverless (auto-pause)    |
 | Application Insights | `appi-learningapp-<env>`        | Performance & error monitoring             |
@@ -106,7 +106,7 @@ az deployment group create \
 
 ### Prerequisites
 
-- **Node.js 20+**
+- **Node.js 24+**
 - **Docker** (for local SQL Server) or **Azure SQL Database**
 - **Azure CLI** (for infrastructure deployment)
 

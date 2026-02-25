@@ -17,7 +17,7 @@ param location string
   '20-lts'
   '22-lts'
 ])
-param nodeVersion string = '20-lts'
+param nodeVersion string = '24-lts'
 
 @description('App Service Plan SKU name')
 @allowed([
