@@ -120,7 +120,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     environment:
-      name: staging
+      name: production
       url: ${{ steps.deploy.outputs.webapp-url }}
 
     steps:
@@ -137,41 +137,9 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Deploy to staging slot
+      - name: Deploy to App Service
         id: deploy
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
-          slot-name: staging
           package: deploy-package/
-
-      - name: Wait for staging to warm up
-        run: |
-          echo "Waiting 30s for staging slot to initialize..."
-          sleep 30
-
-      - name: Health check on staging
-        run: |
-          STAGING_URL="https://${{ env.AZURE_WEBAPP_NAME }}-staging.azurewebsites.net/api/health"
-          echo "Checking health at: $STAGING_URL"
-          for i in {1..5}; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$STAGING_URL" || true)
-            echo "Attempt $i: HTTP $STATUS"
-            if [ "$STATUS" = "200" ]; then
-              echo "Staging health check passed!"
-              exit 0
-            fi
-            sleep 10
-          done
-          echo "::error::Staging health check failed after 5 attempts"
-          exit 1
-
-      - name: Swap staging to production
-        uses: azure/cli@v2
-        with:
-          inlineScript: |
-            az webapp deployment slot swap \
-              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
-              --name ${{ env.AZURE_WEBAPP_NAME }} \
-              --slot staging \
-              --target-slot production

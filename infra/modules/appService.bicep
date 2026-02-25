@@ -152,34 +152,12 @@ resource appPrivateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZo
   }
 }
 
-// ---------- Staging Deployment Slot ----------
-resource stagingSlot 'Microsoft.Web/sites/slots@2023-12-01' = {
-  parent: appService
-  name: 'staging'
-  location: location
-  kind: 'app,linux'
-  properties: {
-    serverFarmId: appServicePlan.id
-    httpsOnly: true
-    siteConfig: {
-      linuxFxVersion: 'NODE|${nodeVersion}'
-      alwaysOn: false // Save cost on staging
-      minTlsVersion: '1.2'
-      ftpsState: 'Disabled'
-      autoSwapSlotName: '' // No auto-swap; we swap manually in CI/CD
-    }
-  }
-}
-
 // ---------- Outputs ----------
 @description('App Service default hostname')
 output appServiceHostName string = appService.properties.defaultHostName
 
 @description('App Service resource ID')
 output appServiceId string = appService.id
-
-@description('Staging slot hostname')
-output stagingSlotHostName string = stagingSlot.properties.defaultHostName
 
 @description('App Service system-assigned managed identity principal ID')
 output principalId string = appService.identity.principalId

@@ -122,9 +122,6 @@ module sqlDatabase 'modules/sqlDatabase.bicep' = {
 @description('App Service URL')
 output appUrl string = 'https://${appService.outputs.appServiceHostName}'
 
-@description('Staging slot URL')
-output stagingUrl string = 'https://${appService.outputs.stagingSlotHostName}'
-
 @description('SQL Server FQDN')
 output sqlServerFqdn string = sqlDatabase.outputs.sqlServerFqdn
 
