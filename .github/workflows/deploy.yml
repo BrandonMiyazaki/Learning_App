@@ -1,5 +1,5 @@
 # ============================================================================
-# Chore App — CI/CD Pipeline
+# Learning App — CI/CD Pipeline
 # Build React + Express app and deploy to Azure App Service via staging slot.
 #
 # Required GitHub Secrets:
@@ -16,8 +16,8 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_WEBAPP_NAME: app-choreapp-prod
-  AZURE_RESOURCE_GROUP: rg-choreapp-prod
+  AZURE_WEBAPP_NAME: app-learningapp-prod
+  AZURE_RESOURCE_GROUP: rg-learningapp-prod
   NODE_VERSION: '20.x'
 
 # Limit concurrent deployments to prevent slot conflicts

@@ -12,13 +12,11 @@ param databaseName string
 @description('Azure region for all resources')
 param location string
 
-@description('SQL Server admin username')
-param sqlAdminLogin string
+@description('Display name for the Entra ID admin (e.g. the App Service name)')
+param entraAdminDisplayName string
 
-@description('SQL Server admin password — must meet complexity requirements')
-@secure()
-@minLength(12)
-param sqlAdminPassword string
+@description('Object (principal) ID of the Entra ID admin (e.g. App Service managed identity)')
+param entraAdminPrincipalId string
 
 @description('Database SKU name')
 @allowed([
@@ -43,26 +41,65 @@ param autoPauseDelay int = 60
 @description('Minimum vCores for serverless SKU')
 param minCapacity string = '0.5'
 
+@description('Subnet resource ID for the SQL private endpoint')
+param privateEndpointSubnetId string
+
+@description('Private DNS Zone resource ID for privatelink.database.windows.net')
+param sqlPrivateDnsZoneId string
+
 // ---------- SQL Server ----------
 resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
   name: serverName
   location: location
   properties: {
-    administratorLogin: sqlAdminLogin
-    administratorLoginPassword: sqlAdminPassword
     version: '12.0'
     minimalTlsVersion: '1.2'
-    publicNetworkAccess: 'Enabled' // Restrict further in production
+    publicNetworkAccess: 'Disabled'
+    administrators: {
+      administratorType: 'ActiveDirectory'
+      principalType: 'Application'
+      login: entraAdminDisplayName
+      sid: entraAdminPrincipalId
+      tenantId: subscription().tenantId
+      azureADOnlyAuthentication: true
+    }
   }
 }
 
-// ---------- Firewall: Allow Azure Services ----------
-resource firewallAllowAzure 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview' = {
-  parent: sqlServer
-  name: 'AllowAllAzureIps'
+// ---------- Private Endpoint: SQL Server ----------
+resource sqlPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-11-01' = {
+  name: 'pe-${serverName}'
+  location: location
   properties: {
-    startIpAddress: '0.0.0.0'
-    endIpAddress: '0.0.0.0'
+    subnet: {
+      id: privateEndpointSubnetId
+    }
+    privateLinkServiceConnections: [
+      {
+        name: 'plsc-${serverName}'
+        properties: {
+          privateLinkServiceId: sqlServer.id
+          groupIds: [
+            'sqlServer'
+          ]
+        }
+      }
+    ]
+  }
+}
+
+resource sqlPrivateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-11-01' = {
+  parent: sqlPrivateEndpoint
+  name: 'default'
+  properties: {
+    privateDnsZoneConfigs: [
+      {
+        name: 'privatelink-database-windows-net'
+        properties: {
+          privateDnsZoneId: sqlPrivateDnsZoneId
+        }
+      }
+    ]
   }
 }
 
@@ -116,5 +153,5 @@ output sqlServerId string = sqlServer.id
 @description('SQL Database resource ID')
 output sqlDatabaseId string = sqlDatabase.id
 
-@description('Connection string template (password placeholder)')
-output connectionStringTemplate string = 'sqlserver://${sqlServer.properties.fullyQualifiedDomainName}:1433;database=${databaseName};user=${sqlAdminLogin};password={your_password};encrypt=true;trustServerCertificate=false'
+@description('Connection string template (managed identity)')
+output connectionStringTemplate string = 'sqlserver://${sqlServer.properties.fullyQualifiedDomainName}:1433;database=${databaseName};encrypt=true;trustServerCertificate=false;authentication=ActiveDirectoryManagedIdentity'

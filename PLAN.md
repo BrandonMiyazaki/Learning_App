@@ -1,8 +1,8 @@
-# Chore App - Project Plan
+# Learning App - Project Plan
 
 ## Overview
 
-A kid-friendly, multi-tenant web application where children can pick chores, complete them, and earn points. Parents/admins manage households, assign available chores, and track progress. The UI is simple, colorful, and intuitive for kids.
+A kid-friendly, multi-tenant web application where children can pick topics they want to learn each day and choose from different types of lessons. Parents/admins manage households, create available lessons/topics, and track progress. The UI is simple, colorful, and intuitive for kids.
 
 ---
 
@@ -18,8 +18,8 @@ A kid-friendly, multi-tenant web application where children can pick chores, com
 │  │                      │       │                        │             │
 │  │  Frontend: React     │       │  - Households          │             │
 │  │  (static, served by  │       │  - Users (kids/parents)│             │
-│  │   Express)           │       │  - Chores              │             │
-│  │  Backend: Express API│       │  - CompletedChores     │             │
+│  │   Express)           │       │  - Lessons             │             │
+│  │  Backend: Express API│       │  - CompletedLessons    │             │
 │  │                      │       │  - Points              │             │
 │  │  Staging Slot ──┐    │       └────────────────────────┘             │
 │  └─────────────────┼────┘                                              │
@@ -84,29 +84,30 @@ Each **household** is a tenant. Isolation is achieved via a `householdId` foreig
 | totalPoints   | INT          | Running total, default 0      |
 | createdAt     | DATETIME     | Default GETDATE()             |
 
-#### `Chores`
+#### `Lessons`
 | Column        | Type         | Notes                         |
 |---------------|--------------|-------------------------------|
 | id            | INT (PK)     | Auto-increment                |
 | householdId   | INT (FK)     | References Households.id      |
-| title         | NVARCHAR(100)| e.g. "Make your bed"          |
+| title         | NVARCHAR(100)| e.g. "Learn about dinosaurs"  |
 | description   | NVARCHAR(255)| Optional details              |
+| topic         | NVARCHAR(50) | e.g. "Science", "Math", "Art" |
 | points        | INT          | Points awarded on completion  |
 | icon          | NVARCHAR(50) | Emoji or icon name            |
 | isActive      | BIT          | Soft-delete / disable         |
 | createdAt     | DATETIME     | Default GETDATE()             |
 
-#### `CompletedChores`
+#### `CompletedLessons`
 | Column        | Type         | Notes                              |
 |---------------|--------------|------------------------------------|
 | id            | INT (PK)     | Auto-increment                     |
-| choreId       | INT (FK)     | References Chores.id               |
+| lessonId      | INT (FK)     | References Lessons.id              |
 | userId        | INT (FK)     | References Users.id (the kid)      |
 | householdId   | INT (FK)     | References Households.id           |
-| completedAt   | DATETIME     | When the chore was completed       |
+| completedAt   | DATETIME     | When the lesson was completed      |
 | approvedByUserId | INT (FK)  | Parent who approved (nullable)     |
 | status        | NVARCHAR(20) | 'pending', 'approved', 'rejected'  |
-| pointsAwarded | INT          | Points given (copied from Chore)   |
+| pointsAwarded | INT          | Points given (copied from Lesson)  |
 
 #### `Rewards` *(stretch goal)*
 | Column        | Type         | Notes                         |
@@ -142,21 +143,21 @@ Each **household** is a tenant. Isolation is achieved via a `householdId` foreig
 | GET    | /api/users/:id               | Get user profile + points    |
 | PUT    | /api/users/:id               | Update avatar/name           |
 
-### Chores
+### Lessons
 | Method | Endpoint                    | Description                  |
 |--------|-----------------------------|------------------------------|
-| GET    | /api/chores                  | List active chores           |
-| POST   | /api/chores                  | Create chore (parent only)   |
-| PUT    | /api/chores/:id              | Edit chore (parent only)     |
-| DELETE | /api/chores/:id              | Deactivate chore (parent)    |
+| GET    | /api/lessons                 | List active lessons          |
+| POST   | /api/lessons                 | Create lesson (parent only)  |
+| PUT    | /api/lessons/:id             | Edit lesson (parent only)    |
+| DELETE | /api/lessons/:id             | Deactivate lesson (parent)   |
 
-### Completed Chores
-| Method | Endpoint                          | Description                    |
-|--------|-----------------------------------|--------------------------------|
-| POST   | /api/chores/:id/complete          | Kid marks chore as done        |
-| GET    | /api/completed-chores             | List completed (filterable)    |
-| PUT    | /api/completed-chores/:id/approve | Parent approves completion     |
-| PUT    | /api/completed-chores/:id/reject  | Parent rejects completion      |
+### Completed Lessons
+| Method | Endpoint                            | Description                    |
+|--------|-------------------------------------|--------------------------------|
+| POST   | /api/lessons/:id/complete           | Kid marks lesson as done       |
+| GET    | /api/completed-lessons              | List completed (filterable)    |
+| PUT    | /api/completed-lessons/:id/approve  | Parent approves completion     |
+| PUT    | /api/completed-lessons/:id/reject   | Parent rejects completion      |
 
 ### Leaderboard
 | Method | Endpoint                    | Description                       |
@@ -174,18 +175,18 @@ All pages use large text, bright colors, rounded corners, and fun icons/emojis t
 | Page                | Route              | Description                                         |
 |---------------------|--------------------|-----------------------------------------------------|
 | **Welcome/Login**   | `/`                | Pick your name/avatar, enter PIN                    |
-| **Chore Board**     | `/chores`          | Grid of available chores with icons & points        |
-| **My Chores**       | `/my-chores`       | Kid's completed/pending chores history               |
+| **Lesson Board**    | `/lessons`         | Grid of available lessons/topics with icons & points|
+| **My Lessons**      | `/my-lessons`      | Kid's completed/pending lessons history              |
 | **Leaderboard**     | `/leaderboard`     | Fun scoreboard showing all kids' points             |
 | **Profile**         | `/profile`         | Kid's avatar, total points, streaks                 |
-| **Parent Dashboard**| `/parent`          | Manage chores, approve completions, manage kids     |
+| **Parent Dashboard**| `/parent`          | Manage lessons, approve completions, manage kids    |
 | **Setup Household** | `/setup`           | Create household, get join code                     |
 
 ### UI Design Principles
 - **Large tap targets** (buttons ≥ 48px)
 - **Bright, pastel color palette** (friendly, not overwhelming)
-- **Emoji icons** for chores (🧹🛏️🍽️🐕🗑️)
-- **Celebratory animations** when a chore is completed (confetti, stars)
+- **Emoji icons** for lessons (📚🧪🎨🎵🌎)
+- **Celebratory animations** when a lesson is completed (confetti, stars)
 - **Simple navigation** — bottom tab bar on mobile, sidebar on desktop
 - **Avatar selection** for each kid (animals, characters)
 - **Points displayed prominently** with fun counters
@@ -199,26 +200,26 @@ All pages use large text, bright colors, rounded corners, and fun icons/emojis t
 │  ⭐ 45 points      [Avatar]    │
 ├─────────────────────────────────┤
 │                                 │
-│  Pick a Chore!                  │
+│  Pick a Lesson!                 │
 │                                 │
 │  ┌──────┐  ┌──────┐  ┌──────┐  │
-│  │ 🛏️   │  │ 🧹   │  │ 🍽️   │  │
-│  │ Make  │  │ Sweep│  │ Set  │  │
-│  │ Bed   │  │ Floor│  │ Table│  │
+│  │ 📚   │  │ 🧪   │  │ 🎨   │  │
+│  │ Read-│  │ Sci- │  │ Art  │  │
+│  │ ing  │  │ ence │  │ Time │  │
 │  │ 10pts │  │ 15pts│  │ 10pts│  │
-│  │ [DO!] │  │ [DO!]│  │ [DO!]│  │
+│  │ [GO!] │  │ [GO!]│  │ [GO!]│  │
 │  └──────┘  └──────┘  └──────┘  │
 │                                 │
 │  ┌──────┐  ┌──────┐  ┌──────┐  │
-│  │ 🐕   │  │ 🗑️   │  │ 📚   │  │
-│  │ Feed  │  │ Take │  │ Read │  │
-│  │ Dog   │  │ Trash│  │ Book │  │
+│  │ 🎵   │  │ 🌎   │  │ 🧩   │  │
+│  │ Music│  │ Geo- │  │ Puzzle│  │
+│  │      │  │ graphy│  │      │  │
 │  │ 15pts │  │ 10pts│  │ 20pts│  │
-│  │ [DO!] │  │ [DO!]│  │ [DO!]│  │
+│  │ [GO!] │  │ [GO!]│  │ [GO!]│  │
 │  └──────┘  └──────┘  └──────┘  │
 │                                 │
 ├─────────────────────────────────┤
-│  🏠 Home  📋 My Chores  🏆 Board│
+│  🏠 Home  📋 My Lessons  🏆 Board│
 └─────────────────────────────────┘
 ```
 
@@ -227,21 +228,21 @@ All pages use large text, bright colors, rounded corners, and fun icons/emojis t
 ## 6. Project Structure
 
 ```
-Chore_App/
+Learning_App/
 ├── client/                    # React frontend (Vite)
 │   ├── public/
 │   ├── src/
 │   │   ├── assets/            # Images, icons, avatars
 │   │   ├── components/        # Reusable UI components
-│   │   │   ├── ChoreCard.jsx
+│   │   │   ├── LessonCard.jsx
 │   │   │   ├── Avatar.jsx
 │   │   │   ├── PointsBadge.jsx
 │   │   │   ├── Navbar.jsx
 │   │   │   └── ConfettiEffect.jsx
 │   │   ├── pages/
 │   │   │   ├── Login.jsx
-│   │   │   ├── ChoreBoard.jsx
-│   │   │   ├── MyChores.jsx
+│   │   │   ├── LessonBoard.jsx
+│   │   │   ├── MyLessons.jsx
 │   │   │   ├── Leaderboard.jsx
 │   │   │   ├── Profile.jsx
 │   │   │   ├── ParentDashboard.jsx
@@ -262,8 +263,8 @@ Chore_App/
 │   ├── src/
 │   │   ├── routes/
 │   │   │   ├── auth.js
-│   │   │   ├── chores.js
-│   │   │   ├── completedChores.js
+│   │   │   ├── lessons.js
+│   │   │   ├── completedLessons.js
 │   │   │   ├── users.js
 │   │   │   ├── household.js
 │   │   │   └── leaderboard.js
@@ -302,7 +303,7 @@ Chore_App/
 ## 7. Implementation Phases
 
 ### Phase 1: Azure Infrastructure Setup ✅
-- [x] Create Azure Resource Group (`rg-choreapp-<env>`) — defined in Bicep (main.bicep)
+- [x] Create Azure Resource Group (`rg-learningapp-<env>`) — defined in Bicep (main.bicep)
 - [x] Provision Azure SQL Server and Database via Bicep/CLI — `infra/modules/sqlDatabase.bicep`
 - [x] Configure Azure SQL firewall rules (allow Azure services, dev IPs) — firewall rule in sqlDatabase.bicep
 - [x] Provision Azure App Service Plan (Linux, B1 tier) — `infra/modules/appService.bicep`
@@ -319,20 +320,20 @@ Chore_App/
 - [ ] Create database schema and run Prisma migrations against Azure SQL
 - [ ] Add health-check endpoint (`GET /api/health`) for App Service monitoring
 - [ ] Build auth endpoints (register household, join, login with PIN)
-- [ ] Build chore CRUD endpoints (parent-only create/edit/delete)
-- [ ] Build chore completion endpoint (kid marks done)
+- [ ] Build lesson CRUD endpoints (parent-only create/edit/delete)
+- [ ] Build lesson completion endpoint (kid marks done)
 - [ ] Build Login page (pick name, enter PIN)
-- [ ] Build Chore Board page (grid of chore cards)
+- [ ] Build Lesson Board page (grid of lesson cards)
 - [ ] Build basic navigation (bottom tab bar)
 - [ ] Verify first deploy to Azure App Service staging slot
 
 ### Phase 3: Core Features
-- [ ] Build Parent Dashboard (manage chores, see pending approvals)
-- [ ] Build approval/rejection flow for completed chores
-- [ ] Build My Chores page (kid's history)
+- [ ] Build Parent Dashboard (manage lessons, see pending approvals)
+- [ ] Build approval/rejection flow for completed lessons
+- [ ] Build My Lessons page (kid's history)
 - [ ] Build Leaderboard page (points ranking)
 - [ ] Build Profile page (avatar, total points)
-- [ ] Add celebratory animations (confetti on chore completion)
+- [ ] Add celebratory animations (confetti on lesson completion)
 - [ ] Add avatar selection system
 
 ### Phase 4: Polish & Production Deploy
@@ -344,13 +345,13 @@ Chore_App/
 - [ ] Enable Azure SQL automated backups and geo-redundancy review
 - [ ] Load-test and verify DTU/vCore scaling on Azure SQL
 - [ ] Swap staging slot → production for zero-downtime release
-- [ ] Add seed data (default chore templates)
+- [ ] Add seed data (default lesson templates)
 
 ### Phase 5: Stretch Goals
 - [ ] Rewards store (kids spend points on rewards)
-- [ ] Weekly/daily chore streaks
+- [ ] Weekly/daily learning streaks
 - [ ] Push notifications for pending approvals
-- [ ] Chore scheduling (recurring chores)
+- [ ] Lesson scheduling (recurring lessons)
 - [ ] Dark mode / theme selection
 - [ ] Sound effects for interactions
 - [ ] Enable autoscaling on App Service Plan for traffic spikes
@@ -363,12 +364,12 @@ Chore_App/
 
 | Resource               | Name Pattern                            |
 |------------------------|-----------------------------------------|
-| Resource Group         | `rg-choreapp-<env>`                     |
-| App Service Plan       | `plan-choreapp-<env>`                   |
-| App Service            | `app-choreapp-<env>`                    |
-| SQL Server             | `sql-choreapp-<env>`                    |
-| SQL Database           | `sqldb-choreapp-<env>`                  |
-| Application Insights   | `appi-choreapp-<env>`                   |
+| Resource Group         | `rg-learningapp-<env>`                  |
+| App Service Plan       | `plan-learningapp-<env>`                |
+| App Service            | `app-learningapp-<env>`                 |
+| SQL Server             | `sql-learningapp-<env>`                 |
+| SQL Database           | `sqldb-learningapp-<env>`               |
+| Application Insights   | `appi-learningapp-<env>`                |
 
 > `<env>` = `dev`, `staging`, or `prod`
 
@@ -420,7 +421,7 @@ Chore_App/
 - Track:
   - Request rates, response times, failure rates
   - Dependency calls (Azure SQL query performance)
-  - Custom events (chore completions, approvals)
+  - Custom events (lesson completions, approvals)
 - Use **Live Metrics** for real-time monitoring
 - Set up **Alerts** for error rate spikes or high response times
 
@@ -436,8 +437,8 @@ param location string = resourceGroup().location
 module appService 'modules/appService.bicep' = {
   name: 'appService'
   params: {
-    appName: 'app-choreapp-${environmentName}'
-    planName: 'plan-choreapp-${environmentName}'
+    appName: 'app-learningapp-${environmentName}'
+    planName: 'plan-learningapp-${environmentName}'
     location: location
     nodeVersion: '20-lts'
   }
@@ -446,8 +447,8 @@ module appService 'modules/appService.bicep' = {
 module sqlDatabase 'modules/sqlDatabase.bicep' = {
   name: 'sqlDatabase'
   params: {
-    serverName: 'sql-choreapp-${environmentName}'
-    databaseName: 'sqldb-choreapp-${environmentName}'
+    serverName: 'sql-learningapp-${environmentName}'
+    databaseName: 'sqldb-learningapp-${environmentName}'
     location: location
   }
 }
@@ -455,7 +456,7 @@ module sqlDatabase 'modules/sqlDatabase.bicep' = {
 module monitoring 'modules/monitoring.bicep' = {
   name: 'monitoring'
   params: {
-    appInsightsName: 'appi-choreapp-${environmentName}'
+    appInsightsName: 'appi-learningapp-${environmentName}'
     location: location
   }
 }
@@ -463,9 +464,9 @@ module monitoring 'modules/monitoring.bicep' = {
 
 **Deploy infrastructure:**
 ```bash
-az group create --name rg-choreapp-dev --location eastus
+az group create --name rg-learningapp-dev --location westus2
 az deployment group create \
-  --resource-group rg-choreapp-dev \
+  --resource-group rg-learningapp-dev \
   --template-file infra/main.bicep \
   --parameters environmentName=dev
 ```
@@ -476,10 +477,10 @@ az deployment group create \
 2. **Configure SQL firewall** — Allow your dev IP and Azure services
 3. **Set connection string** — Add Azure SQL connection string to App Service Configuration
 4. **Run Prisma migrations** — `npx prisma migrate deploy` against Azure SQL from a local machine or CI
-5. **Seed database** — `npx prisma db seed` for default chore templates
+5. **Seed database** — `npx prisma db seed` for default lesson templates
 6. **Configure GitHub Actions** — Add `AZURE_WEBAPP_PUBLISH_PROFILE` secret to the GitHub repo
 7. **Push to `main`** — GitHub Actions builds and deploys to the staging slot
-8. **Verify staging** — Test the staging slot URL (`app-choreapp-dev-staging.azurewebsites.net`)
+8. **Verify staging** — Test the staging slot URL (`app-learningapp-dev-staging.azurewebsites.net`)
 9. **Swap to production** — Swap staging → production slot for zero-downtime release
 
 ### 8.7 GitHub Actions CI/CD Workflow
@@ -493,7 +494,7 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_WEBAPP_NAME: app-choreapp-prod
+  AZURE_WEBAPP_NAME: app-learningapp-prod
   NODE_VERSION: '20.x'
 
 jobs:
@@ -562,7 +563,7 @@ jobs:
         with:
           inlineScript: |
             az webapp deployment slot swap \
-              --resource-group rg-choreapp-prod \
+              --resource-group rg-learningapp-prod \
               --name ${{ env.AZURE_WEBAPP_NAME }} \
               --slot staging \
               --target-slot production
@@ -583,10 +584,10 @@ jobs:
 ```bash
 # Start a local SQL Server for development
 docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=YourStrong!Passw0rd" \
-  -p 1433:1433 --name sql-choreapp -d mcr.microsoft.com/mssql/server:2022-latest
+  -p 1433:1433 --name sql-learningapp -d mcr.microsoft.com/mssql/server:2022-latest
 
 # Set DATABASE_URL in server/.env
-# DATABASE_URL="sqlserver://localhost:1433;database=ChoreApp;user=sa;password=YourStrong!Passw0rd;trustServerCertificate=true"
+# DATABASE_URL="sqlserver://localhost:1433;database=LearningApp;user=sa;password=YourStrong!Passw0rd;trustServerCertificate=true"
 
 # Run migrations
 cd server && npx prisma migrate dev
@@ -640,20 +641,20 @@ cd server && npx prisma migrate dev
 
 ---
 
-## 11. Default Chore Templates (Seed Data)
+## 11. Default Lesson Templates (Seed Data)
 
-| Chore             | Icon | Points |
-|-------------------|------|--------|
-| Make your bed     | 🛏️   | 10     |
-| Sweep the floor   | 🧹   | 15     |
-| Set the table     | 🍽️   | 10     |
-| Feed the pet      | 🐕   | 15     |
-| Take out trash    | 🗑️   | 10     |
-| Read for 20 min   | 📚   | 20     |
-| Clean your room   | 🧽   | 20     |
-| Do the dishes     | 🫧   | 15     |
-| Water the plants  | 🌱   | 10     |
-| Put away laundry  | 👕   | 15     |
+| Lesson               | Icon | Topic     | Points |
+|----------------------|------|-----------|--------|
+| Read for 20 min      | 📚   | Reading   | 20     |
+| Math puzzles         | 🧩   | Math      | 15     |
+| Science experiment   | 🧪   | Science   | 20     |
+| Draw a picture       | 🎨   | Art       | 10     |
+| Learn a new song     | 🎵   | Music     | 15     |
+| Geography quiz       | 🌎   | Geography | 15     |
+| Write a short story  | ✍️   | Writing   | 20     |
+| History facts        | 🏰   | History   | 15     |
+| Spelling practice    | 📝   | Language  | 10     |
+| Nature observation   | 🌿   | Science   | 10     |
 
 ---
 

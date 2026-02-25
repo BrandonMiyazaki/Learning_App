@@ -1,11 +1,11 @@
 // ============================================================================
-// Chore App — Main Bicep Template
-// Orchestrates all Azure resource deployments for the Chore App.
+// Learning App — Main Bicep Template
+// Orchestrates all Azure resource deployments for the Learning App.
 //
 // Usage:
-//   az group create --name rg-choreapp-dev --location eastus
+//   az group create --name rg-learningapp-dev --location westus2
 //   az deployment group create \
-//     --resource-group rg-choreapp-dev \
+//     --resource-group rg-learningapp-dev \
 //     --template-file infra/main.bicep \
 //     --parameters infra/parameters/dev.bicepparam
 // ============================================================================
@@ -24,14 +24,6 @@ param environmentName string
 
 @description('Azure region for all resources. Defaults to the resource group location.')
 param location string = resourceGroup().location
-
-@description('SQL Server administrator login name')
-param sqlAdminLogin string
-
-@description('SQL Server administrator password')
-@secure()
-@minLength(12)
-param sqlAdminPassword string
 
 @description('JWT secret for signing authentication tokens')
 @secure()
@@ -65,11 +57,12 @@ param sqlSkuTier string = 'GeneralPurpose'
 
 // ──────────── Resource Names ────────────
 
-var appName = 'app-choreapp-${environmentName}'
-var planName = 'plan-choreapp-${environmentName}'
-var sqlServerName = 'sql-choreapp-${environmentName}'
-var sqlDatabaseName = 'sqldb-choreapp-${environmentName}'
-var appInsightsName = 'appi-choreapp-${environmentName}'
+var appName = 'app-learningapp-${environmentName}'
+var planName = 'plan-learningapp-${environmentName}'
+var sqlServerName = 'sql-learningapp-${environmentName}'
+var sqlDatabaseName = 'sqldb-learningapp-${environmentName}'
+var appInsightsName = 'appi-learningapp-${environmentName}'
+var vnetName = 'vnet-learningapp-${environmentName}'
 
 // ──────────── Modules ────────────
 
@@ -82,21 +75,16 @@ module monitoring 'modules/monitoring.bicep' = {
   }
 }
 
-// 2. Azure SQL Database
-module sqlDatabase 'modules/sqlDatabase.bicep' = {
-  name: 'sqlDatabase-${environmentName}'
+// 2. Virtual Network + Private DNS Zones (deploy before services that need them)
+module networking 'modules/networking.bicep' = {
+  name: 'networking-${environmentName}'
   params: {
-    serverName: sqlServerName
-    databaseName: sqlDatabaseName
+    vnetName: vnetName
     location: location
-    sqlAdminLogin: sqlAdminLogin
-    sqlAdminPassword: sqlAdminPassword
-    skuName: sqlSkuName
-    skuTier: sqlSkuTier
   }
 }
 
-// 3. Azure App Service (depends on monitoring + SQL for connection strings)
+// 3. Azure App Service (deploy before SQL so we can use its managed identity)
 module appService 'modules/appService.bicep' = {
   name: 'appService-${environmentName}'
   params: {
@@ -105,8 +93,27 @@ module appService 'modules/appService.bicep' = {
     location: location
     skuName: appServiceSkuName
     appInsightsConnectionString: monitoring.outputs.connectionString
-    databaseUrl: 'sqlserver://${sqlDatabase.outputs.sqlServerFqdn}:1433;database=${sqlDatabaseName};user=${sqlAdminLogin};password=${sqlAdminPassword};encrypt=true;trustServerCertificate=false'
+    databaseUrl: 'sqlserver://${sqlServerName}.database.windows.net:1433;database=${sqlDatabaseName};encrypt=true;trustServerCertificate=false;authentication=ActiveDirectoryManagedIdentity'
     jwtSecret: jwtSecret
+    appIntegrationSubnetId: networking.outputs.appIntegrationSubnetId
+    privateEndpointSubnetId: networking.outputs.privateEndpointSubnetId
+    appPrivateDnsZoneId: networking.outputs.appPrivateDnsZoneId
+  }
+}
+
+// 4. Azure SQL Database (uses App Service managed identity as Entra admin)
+module sqlDatabase 'modules/sqlDatabase.bicep' = {
+  name: 'sqlDatabase-${environmentName}'
+  params: {
+    serverName: sqlServerName
+    databaseName: sqlDatabaseName
+    location: location
+    entraAdminDisplayName: appName
+    entraAdminPrincipalId: appService.outputs.principalId
+    skuName: sqlSkuName
+    skuTier: sqlSkuTier
+    privateEndpointSubnetId: networking.outputs.privateEndpointSubnetId
+    sqlPrivateDnsZoneId: networking.outputs.sqlPrivateDnsZoneId
   }
 }
 
@@ -123,3 +130,6 @@ output sqlServerFqdn string = sqlDatabase.outputs.sqlServerFqdn
 
 @description('Application Insights connection string')
 output appInsightsConnectionString string = monitoring.outputs.connectionString
+
+@description('Virtual Network resource ID')
+output vnetId string = networking.outputs.vnetId

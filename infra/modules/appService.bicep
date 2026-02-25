@@ -31,13 +31,21 @@ param skuName string = 'B1'
 @description('Application Insights connection string')
 param appInsightsConnectionString string = ''
 
-@description('Azure SQL connection string')
-@secure()
+@description('Azure SQL connection string (uses managed identity, no password)')
 param databaseUrl string = ''
 
 @description('JWT secret for token signing')
 @secure()
 param jwtSecret string = ''
+
+@description('Subnet resource ID for App Service VNet integration (delegated to Microsoft.Web/serverFarms)')
+param appIntegrationSubnetId string
+
+@description('Subnet resource ID for the App Service private endpoint')
+param privateEndpointSubnetId string
+
+@description('Private DNS Zone resource ID for privatelink.azurewebsites.net')
+param appPrivateDnsZoneId string
 
 // ---------- App Service Plan ----------
 resource appServicePlan 'Microsoft.Web/serverfarms@2023-12-01' = {
@@ -57,9 +65,15 @@ resource appService 'Microsoft.Web/sites@2023-12-01' = {
   name: appName
   location: location
   kind: 'app,linux'
+  identity: {
+    type: 'SystemAssigned'
+  }
   properties: {
     serverFarmId: appServicePlan.id
     httpsOnly: true
+    virtualNetworkSubnetId: appIntegrationSubnetId
+    publicNetworkAccess: 'Disabled'
+    vnetRouteAllEnabled: true
     siteConfig: {
       linuxFxVersion: 'NODE|${nodeVersion}'
       alwaysOn: true
@@ -101,6 +115,43 @@ resource appService 'Microsoft.Web/sites@2023-12-01' = {
   }
 }
 
+// ---------- Private Endpoint: App Service ----------
+resource appPrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-11-01' = {
+  name: 'pe-${appName}'
+  location: location
+  properties: {
+    subnet: {
+      id: privateEndpointSubnetId
+    }
+    privateLinkServiceConnections: [
+      {
+        name: 'plsc-${appName}'
+        properties: {
+          privateLinkServiceId: appService.id
+          groupIds: [
+            'sites'
+          ]
+        }
+      }
+    ]
+  }
+}
+
+resource appPrivateDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2023-11-01' = {
+  parent: appPrivateEndpoint
+  name: 'default'
+  properties: {
+    privateDnsZoneConfigs: [
+      {
+        name: 'privatelink-azurewebsites-net'
+        properties: {
+          privateDnsZoneId: appPrivateDnsZoneId
+        }
+      }
+    ]
+  }
+}
+
 // ---------- Staging Deployment Slot ----------
 resource stagingSlot 'Microsoft.Web/sites/slots@2023-12-01' = {
   parent: appService
@@ -129,3 +180,6 @@ output appServiceId string = appService.id
 
 @description('Staging slot hostname')
 output stagingSlotHostName string = stagingSlot.properties.defaultHostName
+
+@description('App Service system-assigned managed identity principal ID')
+output principalId string = appService.identity.principalId
