@@ -11,6 +11,7 @@ param location = 'eastus'
 //     --template-file infra/main.bicep \
 //     --parameters infra/parameters/prod.bicepparam \
 //     --parameters jwtSecret='<secure-value>'
+param jwtSecret = ''
 param appServiceSkuName = 'B1'
 param sqlSkuName = 'GP_S_Gen5_2'
 param sqlSkuTier = 'GeneralPurpose'

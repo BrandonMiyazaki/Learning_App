@@ -11,6 +11,7 @@ param location = 'westus2'
 //     --template-file infra/main.bicep \
 //     --parameters infra/parameters/dev.bicepparam \
 //     --parameters jwtSecret='<secure-value>'
+param jwtSecret = ''
 param appServiceSkuName = 'B1'
 param sqlSkuName = 'GP_S_Gen5_1'
 param sqlSkuTier = 'GeneralPurpose'

@@ -3,7 +3,15 @@
 # Build React + Express app and deploy to Azure App Service via staging slot.
 #
 # Required GitHub Secrets:
-#   AZURE_WEBAPP_PUBLISH_PROFILE  — Download from Azure Portal > App Service > Deployment Center
+#   AZURE_CLIENT_ID        — App registration (service principal) client ID
+#   AZURE_TENANT_ID        — Entra ID tenant ID
+#   AZURE_SUBSCRIPTION_ID  — Azure subscription ID
+#
+# NOTE: This app uses private endpoints (no public access). To deploy from
+# GitHub Actions you need one of:
+#   1. A self-hosted runner inside the VNet
+#   2. Temporarily allow SCM access from GitHub-hosted runner IPs
+#   3. Use Azure DevOps with VNet-injected agents
 # ============================================================================
 
 name: Build and Deploy to Azure App Service
@@ -27,6 +35,7 @@ concurrency:
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   # ────────── Build ──────────
@@ -111,7 +120,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     environment:
-      name: production
+      name: staging
       url: ${{ steps.deploy.outputs.webapp-url }}
 
     steps:
@@ -121,13 +130,19 @@ jobs:
           name: app-package
           path: deploy-package/
 
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
       - name: Deploy to staging slot
         id: deploy
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           slot-name: staging
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
           package: deploy-package/
 
       - name: Wait for staging to warm up
